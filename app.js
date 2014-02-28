@@ -50,7 +50,16 @@ function messageFor(req, res, next){
               return next(err);
             }
             if (message){
-              res.send(200,_.pick(message,'text','url'));
+              var response = {
+                expired: new Date().getTime()
+              };
+              _.extend(response,_.pick(message,'text','url'));
+              if (scenario.frequency == '1H'){
+                response.expired = response.expired + 1*60*60*1000;
+              }else if (scenario.frequency == '1D'){
+                response.expired = response.expired + 24*60*60*1000;
+              }
+              res.send(200,response);
               var log = {
                 ts: new Date().getTime(),
                 proximity: req.params.proximity,
