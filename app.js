@@ -2,7 +2,6 @@ var restify = require('restify');
 var mongojs = require('mongojs');
 var _ = require('underscore');
 
-var ip = '54.84.241.29';
 var port = '8081';
 
 var server = restify.createServer({
@@ -13,7 +12,7 @@ server.use(restify.queryParser());
 server.use(restify.bodyParser());
 server.use(restify.CORS());
 
-var mongoConnection = '127.0.0.1:27017/smartplaces';
+var mongoConnection = 'localhost/smartplaces';
 var db = mongojs(mongoConnection,['smartplaces']);
 var beacons = db.collection('beacons');
 var scenarios = db.collection('scenarios');
@@ -22,8 +21,8 @@ var requests = db.collection('requests');
 
 server.get({path:'/messagefor/:uuid/:major/:minor/:proximity/:event',version:'0.0.1'}, messageFor);
 
-server.listen(port,ip,function(){
-  console.log('%s listening at %s',server,port);
+server.listen(port,function(){
+  console.log('%s listening at %s',server.name,server.url);
 });
 
 function messageFor(req, res, next){
