@@ -15,7 +15,13 @@ server.use(restify.jsonp());
 server.use(restify.gzipResponse());
 server.use(restify.bodyParser());
 
-///
+
+server.get({path:'/passws/'},function (req, res, next){
+  console.log('Handling index request...');
+  res.send(200,{ok:1});
+  return next();
+});
+
 server.post({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
   console.log('Handling registration request...');
   console.log("#<RegistrationRequest device_id: " + req.params.device_id +
