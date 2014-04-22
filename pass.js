@@ -20,16 +20,16 @@ initServer(http_server);
 initServer(https_server);
 
 http_server.listen(http_port,function(){
-  console.log('%s listening at %s',server.name,server.url);
+  console.log('%s listening at %s',http_server.name,http_server.url);
 });
 
 https_server.listen(https_port,function(){
-  console.log('%s listening at %s',server.name,server.url);
+  console.log('%s listening at %s',https_server.name,https_server.url);
 });
 
 
 function initServer(server){
-  
+
   server.use(restify.acceptParser(server.acceptable));
   server.use(restify.authorizationParser());
   server.use(restify.dateParser());
