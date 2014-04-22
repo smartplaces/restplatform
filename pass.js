@@ -18,8 +18,7 @@ server.use(restify.bodyParser());
 ///
 server.post({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
   console.log('Handling registration request...');
-  console.log(
-    "#<RegistrationRequest device_id: " + req.params.device_id +
+  console.log("#<RegistrationRequest device_id: " + req.params.device_id +
     ", pass_type_id: " + req.params.pass_type_id +
     ", serial_number: " + req.params.serial_number +
     ", authentication_token: " + req.header('Authorization') +
@@ -48,7 +47,7 @@ server.get({path:'/passws/v1/passes/:pass_type_id/:serial_number'},function (req
 
 server.post({path:'passws/v1/log'},function (req, res, next){
   console.log('Handling log request...');
-  console.log('#<LogRequest logs: 'req.params.logs+">");
+  console.log('#<LogRequest logs: '+req.params.logs+">");
   res.status(200);
   return next();
 });
