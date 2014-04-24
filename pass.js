@@ -197,6 +197,7 @@ function initServer(server){
       console.log('Handling registration request...');
 
       var authToken = req.header('Authorization');
+      if (authToken) authToken = authToken.replace('ApplePass ','');
       var serialNumber = req.params.serial_number;
       var passType = req.params.pass_type_id;
       var deviceId = req.params.device_id;
@@ -280,6 +281,7 @@ function initServer(server){
     console.log('Handling unregistration request...')
 
     var authToken = req.header('Authorization');
+    if (authToken) authToken = authToken.replace('ApplePass ','');
     var serialNumber = req.params.serial_number;
     var passType = req.params.pass_type_id;
     var deviceId = req.params.device_id;
@@ -298,6 +300,7 @@ function initServer(server){
     console.log('Handling pass delivery request...');
 
     var authToken = req.header('Authorization');
+    if (authToken) authToken = authToken.replace('ApplePass ','');
     var serialNumber = req.params.serial_number;
     var passType = req.params.pass_type_id;
 
