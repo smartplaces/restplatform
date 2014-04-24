@@ -11,9 +11,9 @@ var passes = db.collection('passes');
 var http_port = '80';
 var https_port = '443';
 
-var KEYS_FOLDER = "/home/vagrant/Keys";
+var KEYS_FOLDER = "/home/ubuntu/Keys";
 var KEYS_PASSWORD = "123456";
-var IMAGE_FOLDER = "/home/vagrant/Images/"
+var IMAGE_FOLDER = "/home/ubuntu/Images/"
 
 var http_server = restify.createServer({
   name:'http_restplatform'
@@ -40,12 +40,68 @@ https_server.listen(https_port,function(){
 });
 */
 
+storePass();
+
+function storePass(){
+  passes.findOne({},function(err, pass){
+    if(!pass){
+      var p = {
+        formatVersion: 1,
+        passTypeIdentifier: "pass.ru.smartplaces.coupon",
+        teamIdentifier:     "Y77QB88576",
+        webServiceURL: "http://ec2-54-84-241-29.compute-1.amazonaws.com/passws/",
+        authenticationToken: "10AA10AA10AA10AA10AA10AA10AA10AA10AA10AA",
+        organizationName: "SmartPlaces",
+        description:   "Купон от SmartPlaces",
+        backgroundColor:   "rgb(237,216,216)",
+        foregroundColor: "rgb(247,7,65)",
+        labelColor: "rgb(13,21,237)",
+
+        serialNumber:  "1234567",
+
+        logoText: "Smar Coffe",
+
+        barcode : {
+          message : "1234567",
+          format : "PKBarcodeFormatPDF417",
+          messageEncoding : "utf-8"
+        },
+
+        coupon: {
+          primaryFields : [
+            {
+              key : "offer",
+              label : "-50%",
+              value : "на американо"
+            }
+          ],
+          secondaryFields : [
+            {
+              key : "addInfo",
+              label : "Предложение для",
+              value : "Всех посетителей"
+            }
+          ],
+          backFields : [
+            {
+              "key" : "terms",
+              "label" : "УСЛОВИЯ ИСПОЛЬЗОВАНИЯ",
+              "value" : "Это купон создан компанией SmartPlaces и является ее собственностью."
+            }
+          ]
+      };
+      passes.save(p);
+      console.log('Pass was saved!');
+    }
+  });
+}
+
 function createSamplePass(){
   var template = createTemplate("coupon", {
     formatVersion: 1,
     passTypeIdentifier: "pass.ru.smartplaces.coupon",
     teamIdentifier:     "Y77QB88576",
-    webServiceURL: "https://ec2-54-84-241-29.compute-1.amazonaws.com/passws/",
+    webServiceURL: "http://ec2-54-84-241-29.compute-1.amazonaws.com/passws/",
     authenticationToken: "10AA10AA10AA10AA10AA10AA10AA10AA10AA10AA",
     organizationName: "SmartPlaces",
     description:   "Купон от SmartPlaces",
@@ -136,36 +192,45 @@ function initServer(server){
   });
 
   server.post({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
-    console.log('Handling registration request...');
+    try{
+      console.log('Handling registration request...');
 
-    var authToken = req.header('Authorization');
-    var serialNumber = req.params.serial_number;
-    var passType = req.params.pass_type_id;
-    var deviceId = req.params.device_id;
-    var pushToken = req.params.pushToken;
+      var authToken = req.header('Authorization');
+      var serialNumber = req.params.serial_number;
+      var passType = req.params.pass_type_id;
+      var deviceId = req.params.device_id;
+      var pushToken = req.params.pushToken;
 
-    passes.findOne({passType:passType,serialNumber:serialNumber,authToken:authToken}, function (err,pass){
-      if (pass){
-        if (_.indexOf(pass.registrations,deviceId) > -1){
-          res.status(200);
-          return next();
+      console.log(authToken+","+serial_number+","+passType+","+deviceId+","+pushToken);
+
+      passes.findOne({passType:passType,serialNumber:serialNumber,authToken:authToken}, function (err,pass){
+        if (pass){
+          console.log('Pass for device was found!');
+          if (_.indexOf(pass.registrations,deviceId) > -1){
+            res.status(200);
+            return next();
+          }else{
+            passes.update({_id:pass._id},{$addToSet:{registrations:{deviceId:deviceId,pushToken:pushToken}}},{},function(err){
+                if (err){
+                  res.status(500);
+                  return next();
+                }else{
+                  res.status(201);
+                  return next();
+                }
+            });
+          }
         }else{
-          passes.update({_id:pass._id},{$addToSet:{registrations:{deviceId:deviceId,pushToken:pushToken}}},{},function(err){
-              if (err){
-                res.status(500);
-                return next();
-              }else{
-                res.status(201);
-                return next();
-              }
-          });
+          console.log('Pass for device wasn\'t found!');
+          res.status(401);
+          return next();
         }
-      }else{
-        res.status(401);
-        return next();
-      }
-    });
-    return next();
+      });
+    }catch(ex){
+      console.log(ex);
+      res.status(200);
+      return next();
+    }
 
   });
 
