@@ -89,8 +89,9 @@ function storePass(){
               "value" : "Это купон создан компанией SmartPlaces и является ее собственностью."
             }
           ]
+        }
       };
-      passes.save(p);
+      passes.save({pass:p});
       console.log('Pass was saved!');
     }
   });
@@ -201,9 +202,9 @@ function initServer(server){
       var deviceId = req.params.device_id;
       var pushToken = req.params.pushToken;
 
-      console.log(authToken+","+serial_number+","+passType+","+deviceId+","+pushToken);
+      console.log(authToken+","+serialNumber+","+passType+","+deviceId+","+pushToken);
 
-      passes.findOne({passType:passType,serialNumber:serialNumber,authToken:authToken}, function (err,pass){
+      passes.findOne({'pass.passTypeIdentifier':passType,'pass.serialNumber':serialNumber,'pass.authenticationToken':authToken}, function (err,pass){
         if (pass){
           console.log('Pass for device was found!');
           if (_.indexOf(pass.registrations,deviceId) > -1){
@@ -283,7 +284,7 @@ function initServer(server){
     var passType = req.params.pass_type_id;
     var deviceId = req.params.device_id;
 
-    passes.remove({authToken:authToken, serialNumber:serialNumber, passType:passType, deviceId:deviceId},function(err,count){
+    passes.remove({'pass.authenticationToken':authToken, 'pass.serialNumber':serialNumber, 'pass.passTypeIdentifier':passType, 'registrations.deviceId':deviceId},function(err,count){
       if (count > 0){
         res.status(200);
       }else{
@@ -300,7 +301,7 @@ function initServer(server){
     var serialNumber = req.params.serial_number;
     var passType = req.params.pass_type_id;
 
-    passes.findOne({authToken:authToken,serialNumber:serialNumber,passType:passType},function(err,pass){
+    passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,pass){
       if (pass){
         // Send pass-file to response with mime type: 'application/vnd.apple.pkpass'
         res.status(200);
