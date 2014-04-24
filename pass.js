@@ -2,35 +2,112 @@ var restify = require('restify');
 var _ = require('underscore');
 var fs = require('fs');
 var mongojs = require('mongojs');
+var createTemplate = require("passbook");
 
-var mongoConnection = 'localhost/smartplaces';
+var mongoConnection = 'localhost:3001/smartplaces';
 var db = mongojs(mongoConnection,['smartplaces']);
 var passes = db.collection('passes');
 
 var http_port = '80';
 var https_port = '443';
 
+var KEYS_FOLDER = "/home/vagrant/Keys";
+var KEYS_PASSWORD = "123456";
+var IMAGE_FOLDER = "/home/vagrant/Images/"
+
 var http_server = restify.createServer({
   name:'http_restplatform'
 });
 
+/*
 var https_server = restify.createServer({
   name:'https_restplatform',
   key: fs.readFileSync('/home/ubuntu/ssl/server.key'),
   certificate: fs.readFileSync('/home/ubuntu/ssl/server.crt')
 });
+*/
 
 initServer(http_server);
-initServer(https_server);
+//initServer(https_server);
 
 http_server.listen(http_port,function(){
   console.log('%s listening at %s',http_server.name,http_server.url);
 });
 
+/*
 https_server.listen(https_port,function(){
   console.log('%s listening at %s',https_server.name,https_server.url);
 });
+*/
 
+function createSamplePass(){
+  var template = createTemplate("coupon", {
+    formatVersion: 1,
+    passTypeIdentifier: "pass.ru.smartplaces.coupon",
+    teamIdentifier:     "Y77QB88576",
+    webServiceURL: "https://ec2-54-84-241-29.compute-1.amazonaws.com/passws/",
+    authenticationToken: "10AA10AA10AA10AA10AA10AA10AA10AA10AA10AA",
+    organizationName: "SmartPlaces",
+    description:   "Купон от SmartPlaces",
+  });
+
+  template.keys(KEYS_FOLDER, KEYS_PASSWORD);
+
+  var pass = template.createPass({
+    backgroundColor:   "rgb(237,216,216)",
+    foregroundColor: "rgb(247,7,65)",
+    labelColor: "rgb(13,21,237)",
+
+    serialNumber:  "1234567",
+
+    logoText: "Smar Coffe",
+
+    barcode : {
+      message : "1234567",
+      format : "PKBarcodeFormatPDF417",
+      messageEncoding : "utf-8"
+    },
+
+    coupon: {
+      primaryFields : [
+        {
+          key : "offer",
+          label : "-50%",
+          value : "на американо"
+        }
+      ],
+      secondaryFields : [
+        {
+          key : "addInfo",
+          label : "Предложение для",
+          value : "Всех посетителей"
+        }
+      ],
+      backFields : [
+        {
+          "key" : "terms",
+          "label" : "УСЛОВИЯ ИСПОЛЬЗОВАНИЯ",
+          "value" : "Это купон создан компанией SmartPlaces и является ее собственностью."
+        }
+      ]
+    }
+  });
+
+
+  pass.loadImagesFrom(IMAGE_FOLDER);
+  //pass.images.icon = IMAGE_FOLDER+"icon.png";
+  //pass.images.logo = IMAGE_FOLDER+"logo.png";
+
+  pass.on("error", function(error) {
+    console.error(error);
+  });
+
+  pass.on('end',function(){
+    console.log('Pass created!');
+  });
+
+  return pass;
+}
 
 function initServer(server){
 
@@ -49,7 +126,18 @@ function initServer(server){
     return next();
   });
 
+  server.get({path:'/passws/getSamplePass/:pass_name'},function (req, res, next){
+    var pass = createSamplePass();
+    pass.render(res, function(error) {
+      if (error)
+        console.error(error);
+      return next();
+    });
+  });
+
   server.post({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
+    console.log('Handling registration request...');
+
     var authToken = req.header('Authorization');
     var serialNumber = req.params.serial_number;
     var passType = req.params.pass_type_id;
@@ -77,40 +165,96 @@ function initServer(server){
         return next();
       }
     });
-    /*
-    console.log('Handling registration request...');
-    console.log("#<RegistrationRequest device_id: " + req.params.device_id +
-      ", pass_type_id: " + req.params.pass_type_id +
-      ", serial_number: " + req.params.serial_number +
-      ", authentication_token: " + req.header('Authorization') +
-      ", push_token: " + req.params.pushToken+">");
-    res.status(200);
-    */
     return next();
 
   });
 
   server.get({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id?'},function (req, res, next){
     console.log('Handling updates request...');
-    res.status(204);
-    return next();
+
+    var passType = req.params.pass_type_id;
+    var deviceId = req.params.device_id;
+    var passesUpdatedSince = req.params.passesUpdatedSince;
+
+
+    passes.find({'registrations.deviceId':deviceId},function(err,docs){
+      if (docs.length>0){
+        var result = {
+          lastUpdated: new Date().getTime(),
+          serialNumbers: []
+        }
+        _.each(docs,function(d){
+          if (d.passType === passType){
+            if (passesUpdatedSince){
+              if (!d.updatedAt || d.updatedAt > passesUpdatedSince){
+                result.serialNumbers.append(d.serialNumber);
+              }
+            }else{
+              result.serialNumbers.append(d.serialNumber);
+            }
+          }
+        });
+
+        if (result.serialNumbers.length > 0){
+          res.send(200,result);
+          return next();
+        }else{
+          res.status(204);
+          return next();
+        }
+
+      }else{
+        res.status(404);
+        return next();
+      }
+    });
   });
 
   server.del({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
     console.log('Handling unregistration request...')
-    res.status(200);
-    return next();
+
+    var authToken = req.header('Authorization');
+    var serialNumber = req.params.serial_number;
+    var passType = req.params.pass_type_id;
+    var deviceId = req.params.device_id;
+
+    passes.remove({authToken:authToken, serialNumber:serialNumber, passType:passType, deviceId:deviceId},function(err,count){
+      if (count > 0){
+        res.status(200);
+      }else{
+        res.status(401);
+      }
+      return next();
+    });
   });
 
   server.get({path:'/passws/v1/passes/:pass_type_id/:serial_number'},function (req, res, next){
     console.log('Handling pass delivery request...');
-    res.status(401);
-    return next();
+
+    var authToken = req.header('Authorization');
+    var serialNumber = req.params.serial_number;
+    var passType = req.params.pass_type_id;
+
+    passes.findOne({authToken:authToken,serialNumber:serialNumber,passType:passType},function(err,pass){
+      if (pass){
+        // Send pass-file to response with mime type: 'application/vnd.apple.pkpass'
+        res.status(200);
+        return next();
+      }else{
+        res.status(401);
+        return next();
+      }
+    });
+
+
   });
 
   server.post({path:'passws/v1/log'},function (req, res, next){
     console.log('Handling log request...');
-    console.log('#<LogRequest logs: '+req.params.logs+">");
+    var logs = req.params.logs;
+    _.each(logs,function(log){
+      db.collection('passbook_logs').insert({m:log});
+    });
     res.status(200);
     return next();
   });
