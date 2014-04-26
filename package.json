@@ -1,0 +1,29 @@
+{
+  "name": "restplatform",
+  "version": "0.0.1",
+  "description": "REST API for SmartPlaces",
+  "main": "pass.js",
+  "dependencies": {
+    "restify": "~2.6.3",
+    "passbook": "~2.0.2",
+    "mongojs": "~0.10.1",
+    "underscore": "~1.6.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smartplaces/restplatform.git"
+  },
+  "author": "Alexander Seliverstov",
+  "license": "Commercial",
+  "bugs": {
+    "url": "https://github.com/smartplaces/restplatform/issues"
+  },
+  "homepage": "https://github.com/smartplaces/restplatform",
+  "engines": {
+    "node": "0.10.x"
+  }
+}
