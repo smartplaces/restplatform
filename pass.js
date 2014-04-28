@@ -49,7 +49,7 @@ function storePass(){
         formatVersion: 1,
         passTypeIdentifier: "pass.ru.smartplaces.coupon",
         teamIdentifier:     "Y77QB88576",
-        webServiceURL: "http://ec2-54-84-241-29.compute-1.amazonaws.com/passws/",
+        webServiceURL: "http://sleepy-scrubland-4869.herokuapp.com/passws/",
         authenticationToken: "10AA10AA10AA10AA10AA10AA10AA10AA10AA10AA",
         organizationName: "SmartPlaces",
         description:   "Купон от SmartPlaces",
