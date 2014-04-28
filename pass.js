@@ -8,7 +8,7 @@ var mongoConnection = 'mongodb://smartplaces:EvystVtcnf@oceanic.mongohq.com:1009
 var db = mongojs(mongoConnection,['smartplaces']);
 var passes = db.collection('passes');
 
-var http_port = '80';
+var http_port = '8080';
 var https_port = '443';
 
 var KEYS_FOLDER = "./keys/";
