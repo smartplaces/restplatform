@@ -1,1 +1,1 @@
-web: sudo node pass.js
+web: node pass.js
