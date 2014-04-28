@@ -4,16 +4,16 @@ var fs = require('fs');
 var mongojs = require('mongojs');
 var createTemplate = require("passbook");
 
-var mongoConnection = 'localhost:3001/smartplaces';
+var mongoConnection = 'mongodb://smartplaces:EvystVtcnf@oceanic.mongohq.com:10091/smartplaces'; // || process.env.MONGOHQ_URL || 'localhost:3001/smartplaces';
 var db = mongojs(mongoConnection,['smartplaces']);
 var passes = db.collection('passes');
 
 var http_port = '80';
 var https_port = '443';
 
-var KEYS_FOLDER = "/home/ubuntu/Keys";
+var KEYS_FOLDER = "./keys/";
 var KEYS_PASSWORD = "123456";
-var IMAGE_FOLDER = "/home/ubuntu/Images/"
+var IMAGE_FOLDER = "./images"
 
 var http_server = restify.createServer({
   name:'http_restplatform'
