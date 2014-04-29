@@ -30,7 +30,7 @@ function samplePassJSON(){
     formatVersion: 1,
     passTypeIdentifier: "pass.ru.smartplaces.coupon",
     teamIdentifier:     "Y77QB88576",
-    webServiceURL: "http://sleepy-scrubland-4869.herokuapp.com/passws/",
+    webServiceURL: "https://sleepy-scrubland-4869.herokuapp.com/passws/",
     authenticationToken: "10AA10AA10AA10AA10AA10AA10AA10AA10AA10AA",
     organizationName: "SmartPlaces",
     description:   "Купон от SmartPlaces",
