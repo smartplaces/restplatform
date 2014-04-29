@@ -75,13 +75,13 @@ function samplePassJSON(){
 }
 
 function createSamplePass(){
-  var template = createTemplate("coupon", {});
+  var json = samplePassJSON();
+
+  var template = createTemplate("coupon", {passTypeIdentifier:json.passTypeIdentifier, teamIdentifier:json.teamIdentifier});
 
   template.keys(KEYS_FOLDER, KEYS_PASSWORD);
 
-  var json = samplePassJSON();
-
-  var pass = template.createPass(json);
+  var pass = template.createPass(_.omit(json,'passTypeIdentifier','teamIdentifier'));
 
   pass.loadImagesFrom(IMAGE_FOLDER);
 
@@ -93,7 +93,7 @@ function createSamplePass(){
     console.log('Pass with serial number '+json.serialNumber+' was created.');
   });
 
-  // store pass to database
+  console.log('Store pass to database...');
   passes.save({pass:json});
 
   return pass;
@@ -131,15 +131,13 @@ function initServer(server){
 
   server.get({path:'/passws/getSamplePass/:pass_name'},function (req, res, next){
     var pass = createSamplePass();
-    /*
-    res.writeHead(200,{
-      'Content-Type': 'application/vnd.apple.pkpass',
-      'Cache-Control': 'no-cache, no-store, must-revalidate'
-    })
-    */
+    console.log('Render pass...');
+    console.log(pass);
     pass.render(res, function(error) {
-      if (error)
+      console.log('Pass have been rendered!');
+      if (error){
         console.error(error);
+      }
       return next();
     });
   });
