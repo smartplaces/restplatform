@@ -3,6 +3,8 @@ var _ = require('underscore');
 var fs = require('fs');
 var mongojs = require('mongojs');
 var createTemplate = require("passbook");
+var crypto = require('crypto');
+
 
 var mongoConnection = 'mongodb://smartplaces:EvystVtcnf@oceanic.mongohq.com:10091/smartplaces'; // || process.env.MONGOHQ_URL || 'localhost:3001/smartplaces';
 var db = mongojs(mongoConnection,['smartplaces']);
@@ -26,12 +28,15 @@ http_server.listen(http_port,function(){
 });
 
 function samplePassJSON(){
+  shasum = crypto.createHash('sha1');
+  shasum.update("SHA"+r);
+
   return {
     formatVersion: 1,
     passTypeIdentifier: "pass.ru.smartplaces.coupon",
     teamIdentifier:     "Y77QB88576",
     webServiceURL: "https://sleepy-scrubland-4869.herokuapp.com/passws/",
-    authenticationToken: "10AA10AA10AA10AA10AA10AA10AA10AA10AA10AA",
+    authenticationToken: ""+shasum.digest('hex'),
     organizationName: "SmartPlaces",
     description:   "Купон от SmartPlaces",
     backgroundColor:   "rgb(237,216,216)",
@@ -74,9 +79,7 @@ function samplePassJSON(){
   };
 }
 
-function createSamplePass(){
-  var json = samplePassJSON();
-
+function preparePass(json){
   var template = createTemplate("coupon", {passTypeIdentifier:json.passTypeIdentifier, teamIdentifier:json.teamIdentifier});
 
   template.keys(KEYS_FOLDER, KEYS_PASSWORD);
@@ -115,63 +118,53 @@ function initServer(server){
 	  'default': 'index.html'
   }));
 
-  server.get('/passws/', restify.serveStatic({
-	  'directory': '.',
-	  'default': 'index.html'
-  }));
-
   server.get({path:'/passws/getSamplePass/:pass_name'},function (req, res, next){
-    var pass = createSamplePass();
+    var pass = preparePass(samplePassJSON());
     console.log('Render pass...');
-    console.log(pass);
     pass.render(res, function(error) {
-      console.log('Pass have been rendered!');
       if (error){
         console.error(error);
         res.send(500);
       }
+      console.log('Pass have been rendered!');
       res.send(200);
     });
   });
 
   server.post({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
-    try{
-      console.log('Handling registration request...');
+    console.log('Handling registration request...');
 
-      var authToken = req.header('Authorization');
-      if (authToken) authToken = authToken.replace('ApplePass ','');
-      var serialNumber = req.params.serial_number;
-      var passType = req.params.pass_type_id;
-      var deviceId = req.params.device_id;
-      var pushToken = req.params.pushToken;
+    var authToken = req.header('Authorization');
+    if (authToken) authToken = authToken.replace('ApplePass ','');
+    var serialNumber = req.params.serial_number;
+    var passType = req.params.pass_type_id;
+    var deviceId = req.params.device_id;
+    var pushToken = req.params.pushToken;
 
-      console.log(authToken+","+serialNumber+","+passType+","+deviceId+","+pushToken);
+    console.log(authToken+","+serialNumber+","+passType+","+deviceId+","+pushToken);
 
-      passes.findOne({'pass.passTypeIdentifier':passType,'pass.serialNumber':serialNumber,'pass.authenticationToken':authToken}, function (err,pass){
-        if (pass){
-          console.log('Pass for device was found!');
-          if (_.indexOf(pass.registrations,deviceId) > -1){
-            res.send(200);
-          }else{
-            passes.update({_id:pass._id},{$addToSet:{registrations:{deviceId:deviceId,pushToken:pushToken}}},{},function(err){
-                if (err){
-                  res.send(500);
-                }else{
-                  console.log('Pass was registered successfuly!');
-                  res.send(201);
-                }
-            });
-          }
+    passes.findOne({'pass.passTypeIdentifier':passType,'pass.serialNumber':serialNumber,'pass.authenticationToken':authToken}, function (err,pass){
+      if (pass){
+        console.log('Pass for device was found!');
+        if (_.indexOf(pass.registrations,deviceId) > -1){
+          console.log('Pass already was registered.');
+          res.send(200);
         }else{
-          console.log('Pass for device wasn\'t found!');
-          res.send(401);
+          passes.update({_id:pass._id},{$addToSet:{registrations:{deviceId:deviceId,pushToken:pushToken}}},{},function(err){
+            if (err){
+              console.log(err);
+              res.send(500);
+            }else{
+              console.log('Pass was registered successfuly!');
+              res.send(201);
+            }
+          });
         }
-      });
-    }catch(ex){
-      console.log(ex);
-      res.send(200);
-    }
-
+      }else{
+        console.log('Pass for device wasn\'t found!');
+        res.send(401);
+      }
+    });
   });
 
   server.get({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id?'},function (req, res, next){
@@ -201,11 +194,15 @@ function initServer(server){
         });
 
         if (result.serialNumbers.length > 0){
+          console.log('Updates were found:');
+          console.log(result);
           res.send(200,result);
         }else{
+          console.log('Updates weren\'t found.');
           res.send(204);
         }
       }else{
+        console.log('Authentification was failed.');
         res.send(404);
       }
     });
@@ -222,8 +219,10 @@ function initServer(server){
 
     passes.remove({'pass.authenticationToken':authToken, 'pass.serialNumber':serialNumber, 'pass.passTypeIdentifier':passType, 'registrations.deviceId':deviceId},function(err,count){
       if (count > 0){
+        console.log('Pass was deleted successfuly.');
         res.send(200);
       }else{
+        console.log('Pas wasn\'t found.');
         res.send(401);
       }
     });
@@ -237,16 +236,24 @@ function initServer(server){
     var serialNumber = req.params.serial_number;
     var passType = req.params.pass_type_id;
 
-    /*
-    passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,pass){
-      if (pass){
-        // Send pass-file to response with mime type: 'application/vnd.apple.pkpass'
-        res.send(200);
+
+    passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,p){
+      if (p){
+        var pass = preparePass(p.pass);
+        console.log('Render pass...');
+        pass.render(res, function(error) {
+          if (error){
+            console.error(error);
+            res.send(500);
+          }
+          console.log('Pass have been rendered!');
+          res.send(200);
+        });
       }else{
         res.send(401);
       }
     });
-    */
+
     res.send(401);
   });
 
@@ -256,6 +263,7 @@ function initServer(server){
     _.each(logs,function(log){
       db.collection('passbook_logs').insert({m:log});
     });
+    console.log('Log record added successuly');
     res.send(200);
   });
 }
