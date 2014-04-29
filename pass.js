@@ -217,16 +217,24 @@ function initServer(server){
     var passType = req.params.pass_type_id;
     var deviceId = req.params.device_id;
 
-    passes.remove({'pass.authenticationToken':authToken, 'pass.serialNumber':serialNumber, 'pass.passTypeIdentifier':passType, 'registrations.deviceId':deviceId},function(err,count){
-      if (count > 0){
-        console.log('Pass was deleted successfuly.');
-        res.send(200);
+    passes.findOne({'pass.authenticationToken':authToken, 'pass.serialNumber':serialNumber, 'pass.passTypeIdentifier':passType, 'registrations.deviceId':deviceId},function(err,pass){
+      if (pass){
+        console.log('Pass was found.');
+        passes.update({_id:pass._id},{$pull:{'registrations.deviceId':deviceId}},function(err){
+          if (err){
+            console.log(err);
+            res.send(500);
+          }else{
+            console.log('Pass was unregistered successfuly.');
+            res.send(200);
+          }
+        });
       }else{
         console.log('Pas wasn\'t found.');
         res.send(401);
       }
     });
-  });
+   });
 
   server.get({path:'/passws/v1/passes/:pass_type_id/:serial_number'},function (req, res, next){
     console.log('Handling pass delivery request...');
