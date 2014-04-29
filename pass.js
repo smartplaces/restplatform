@@ -187,10 +187,10 @@ function initServer(server){
           if (d.pass.passTypeIdentifier === passType){
             if (passesUpdatedSince){
               if (!d.updatedAt || d.updatedAt > passesUpdatedSince){
-                result.serialNumbers.append(d.pass.serialNumber);
+                result.serialNumbers.push(d.pass.serialNumber);
               }
             }else{
-              result.serialNumbers.append(d.pass.serialNumber);
+              result.serialNumbers.push(d.pass.serialNumber);
             }
           }}catch(ex){console.log(ex);}
           console.log('result-->');
