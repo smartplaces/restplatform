@@ -185,10 +185,10 @@ function initServer(server){
           if (d.pass.passTypeIdentifier === passType){
             if (passesUpdatedSince){
               if (!d.updatedAt || d.updatedAt > passesUpdatedSince){
-                result.serialNumbers.append(d.serialNumber);
+                result.serialNumbers.append(d.pass.serialNumber);
               }
             }else{
-              result.serialNumbers.append(d.serialNumber);
+              result.serialNumbers.append(d.pass.serialNumber);
             }
           }
         });
@@ -220,7 +220,7 @@ function initServer(server){
     passes.findOne({'pass.authenticationToken':authToken, 'pass.serialNumber':serialNumber, 'pass.passTypeIdentifier':passType, 'registrations.deviceId':deviceId},function(err,pass){
       if (pass){
         console.log('Pass was found.');
-        passes.update({_id:pass._id},{$pull:{registrations: {'registrations.deviceId':deviceId}}},function(err){
+        passes.update({_id:pass._id},{$pull:{registrations: {deviceId:deviceId}}},function(err){
           if (err){
             console.log(err);
             res.send(500);
