@@ -182,6 +182,7 @@ function initServer(server){
           serialNumbers: []
         }
         _.each(docs,function(d){
+          console.log(d);
           if (d.pass.passTypeIdentifier === passType){
             if (passesUpdatedSince){
               if (!d.updatedAt || d.updatedAt > passesUpdatedSince){
@@ -191,6 +192,7 @@ function initServer(server){
               result.serialNumbers.append(d.pass.serialNumber);
             }
           }
+          console.log(result);
         });
 
         if (result.serialNumbers.length > 0){
