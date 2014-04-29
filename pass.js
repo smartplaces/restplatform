@@ -110,24 +110,15 @@ function initServer(server){
   server.use(restify.bodyParser());
 
 
-  server.get({path:'/passws/'},function (req, res, next){
-    console.log('Handling index request...');
-    fs.readFile('./index.html','utf-8',function(err,data){
-      if (err) {
-        res.status(404);
-        return next();
-      }else{
-        res.writeHead(200, {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Content-Length': Buffer.byteLength(data),
-          'Content-Type': 'text/html'
-        });
-        res.write(data);
-        res.end();
-        return next();
-      }
-    });
-  });
+  server.get('/', restify.serveStatic({
+	  'directory': '.',
+	  'default': 'index.html'
+  }));
+
+  server.get('/passws/', restify.serveStatic({
+	  'directory': '.',
+	  'default': 'index.html'
+  }));
 
   server.get({path:'/passws/getSamplePass/:pass_name'},function (req, res, next){
     var pass = createSamplePass();
@@ -137,8 +128,9 @@ function initServer(server){
       console.log('Pass have been rendered!');
       if (error){
         console.error(error);
+        res.send(500);
       }
-      return next();
+      res.send(200);
     });
   });
 
@@ -159,29 +151,25 @@ function initServer(server){
         if (pass){
           console.log('Pass for device was found!');
           if (_.indexOf(pass.registrations,deviceId) > -1){
-            res.status(200);
-            return next();
+            res.send(200);
           }else{
             passes.update({_id:pass._id},{$addToSet:{registrations:{deviceId:deviceId,pushToken:pushToken}}},{},function(err){
                 if (err){
-                  res.status(500);
-                  return next();
+                  res.send(500);
                 }else{
-                  res.status(201);
-                  return next();
+                  console.log('Pass was registered successfuly!');
+                  res.send(201);
                 }
             });
           }
         }else{
           console.log('Pass for device wasn\'t found!');
-          res.status(401);
-          return next();
+          res.send(401);
         }
       });
     }catch(ex){
       console.log(ex);
-      res.status(200);
-      return next();
+      res.send(200);
     }
 
   });
@@ -214,15 +202,11 @@ function initServer(server){
 
         if (result.serialNumbers.length > 0){
           res.send(200,result);
-          return next();
         }else{
-          res.status(204);
-          return next();
+          res.send(204);
         }
-
       }else{
-        res.status(404);
-        return next();
+        res.send(404);
       }
     });
   });
@@ -238,11 +222,10 @@ function initServer(server){
 
     passes.remove({'pass.authenticationToken':authToken, 'pass.serialNumber':serialNumber, 'pass.passTypeIdentifier':passType, 'registrations.deviceId':deviceId},function(err,count){
       if (count > 0){
-        res.status(200);
+        res.send(200);
       }else{
-        res.status(401);
+        res.send(401);
       }
-      return next();
     });
   });
 
@@ -254,18 +237,17 @@ function initServer(server){
     var serialNumber = req.params.serial_number;
     var passType = req.params.pass_type_id;
 
+    /*
     passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,pass){
       if (pass){
         // Send pass-file to response with mime type: 'application/vnd.apple.pkpass'
-        res.status(200);
-        return next();
+        res.send(200);
       }else{
-        res.status(401);
-        return next();
+        res.send(401);
       }
     });
-
-
+    */
+    res.send(401);
   });
 
   server.post({path:'passws/v1/log'},function (req, res, next){
@@ -274,7 +256,6 @@ function initServer(server){
     _.each(logs,function(log){
       db.collection('passbook_logs').insert({m:log});
     });
-    res.status(200);
-    return next();
+    res.send(200);
   });
 }
