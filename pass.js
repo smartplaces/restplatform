@@ -19,103 +19,26 @@ var http_server = restify.createServer({
   name:'http_restplatform'
 });
 
-/*
-var https_server = restify.createServer({
-  name:'https_restplatform',
-  key: fs.readFileSync('/home/ubuntu/ssl/server.key'),
-  certificate: fs.readFileSync('/home/ubuntu/ssl/server.crt')
-});
-*/
-
 initServer(http_server);
-//initServer(https_server);
 
 http_server.listen(http_port,function(){
   console.log('%s listening at %s',http_server.name,http_server.url);
 });
 
-/*
-https_server.listen(https_port,function(){
-  console.log('%s listening at %s',https_server.name,https_server.url);
-});
-*/
-
-storePass();
-
-function storePass(){
-  passes.findOne({},function(err, pass){
-    if(!pass){
-      var p = {
-        formatVersion: 1,
-        passTypeIdentifier: "pass.ru.smartplaces.coupon",
-        teamIdentifier:     "Y77QB88576",
-        webServiceURL: "http://sleepy-scrubland-4869.herokuapp.com/passws/",
-        authenticationToken: "10AA10AA10AA10AA10AA10AA10AA10AA10AA10AA",
-        organizationName: "SmartPlaces",
-        description:   "Купон от SmartPlaces",
-        backgroundColor:   "rgb(237,216,216)",
-        foregroundColor: "rgb(247,7,65)",
-        labelColor: "rgb(13,21,237)",
-
-        serialNumber:  "1234567",
-
-        logoText: "Smar Coffe",
-
-        barcode : {
-          message : "1234567",
-          format : "PKBarcodeFormatPDF417",
-          messageEncoding : "utf-8"
-        },
-
-        coupon: {
-          primaryFields : [
-            {
-              key : "offer",
-              label : "-50%",
-              value : "на американо"
-            }
-          ],
-          secondaryFields : [
-            {
-              key : "addInfo",
-              label : "Предложение для",
-              value : "Всех посетителей"
-            }
-          ],
-          backFields : [
-            {
-              "key" : "terms",
-              "label" : "УСЛОВИЯ ИСПОЛЬЗОВАНИЯ",
-              "value" : "Это купон создан компанией SmartPlaces и является ее собственностью."
-            }
-          ]
-        }
-      };
-      passes.save({pass:p});
-      console.log('Pass was saved!');
-    }
-  });
-}
-
-function createSamplePass(){
-  var template = createTemplate("coupon", {
+function samplePassJSON(){
+  return {
     formatVersion: 1,
     passTypeIdentifier: "pass.ru.smartplaces.coupon",
     teamIdentifier:     "Y77QB88576",
-    webServiceURL: "http://ec2-54-84-241-29.compute-1.amazonaws.com/passws/",
+    webServiceURL: "http://sleepy-scrubland-4869.herokuapp.com/passws/",
     authenticationToken: "10AA10AA10AA10AA10AA10AA10AA10AA10AA10AA",
     organizationName: "SmartPlaces",
     description:   "Купон от SmartPlaces",
-  });
-
-  template.keys(KEYS_FOLDER, KEYS_PASSWORD);
-
-  var pass = template.createPass({
     backgroundColor:   "rgb(237,216,216)",
     foregroundColor: "rgb(247,7,65)",
     labelColor: "rgb(13,21,237)",
 
-    serialNumber:  "1234567",
+    serialNumber:  "SN"+new Date().getTime(),
 
     logoText: "Smar Coffe",
 
@@ -148,20 +71,30 @@ function createSamplePass(){
         }
       ]
     }
-  });
+  };
+}
 
+function createSamplePass(){
+  var template = createTemplate("coupon", {});
+
+  template.keys(KEYS_FOLDER, KEYS_PASSWORD);
+
+  var json = samplePassJSON();
+
+  var pass = template.createPass(json);
 
   pass.loadImagesFrom(IMAGE_FOLDER);
-  //pass.images.icon = IMAGE_FOLDER+"icon.png";
-  //pass.images.logo = IMAGE_FOLDER+"logo.png";
 
   pass.on("error", function(error) {
     console.error(error);
   });
 
   pass.on('end',function(){
-    console.log('Pass created!');
+    console.log('Pass with serial number '+json.serialNumber+' was created.');
   });
+
+  // store pass to database
+  passes.save({pass:json});
 
   return pass;
 }
@@ -179,12 +112,29 @@ function initServer(server){
 
   server.get({path:'/passws/'},function (req, res, next){
     console.log('Handling index request...');
-    res.send(200,{ok:1});
-    return next();
+    fs.readFile('./index.html','utf-8',function(err,data){
+      if (err) {
+        res.status(404);
+        return next();
+      }else{
+        res.writeHead(200, {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Content-Length': Buffer.byteLength(data),
+          'Content-Type': 'text/html'
+        });
+        res.write(data);
+        res.end();
+        return next();
+      }
+    });
   });
 
   server.get({path:'/passws/getSamplePass/:pass_name'},function (req, res, next){
     var pass = createSamplePass();
+    res.writeHead(200,{
+      'Content-Type': 'application/vnd.apple.pkpass',
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
+    })
     pass.render(res, function(error) {
       if (error)
         console.error(error);
