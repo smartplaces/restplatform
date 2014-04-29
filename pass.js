@@ -131,10 +131,12 @@ function initServer(server){
 
   server.get({path:'/passws/getSamplePass/:pass_name'},function (req, res, next){
     var pass = createSamplePass();
+    /*
     res.writeHead(200,{
       'Content-Type': 'application/vnd.apple.pkpass',
       'Cache-Control': 'no-cache, no-store, must-revalidate'
     })
+    */
     pass.render(res, function(error) {
       if (error)
         console.error(error);
