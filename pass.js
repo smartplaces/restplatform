@@ -29,7 +29,7 @@ http_server.listen(http_port,function(){
 
 function samplePassJSON(){
   shasum = crypto.createHash('sha1');
-  shasum.update("SHA"+r);
+  shasum.update("SHA"+Math.random());
 
   return {
     formatVersion: 1,
