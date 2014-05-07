@@ -79,7 +79,7 @@ function samplePassJSON(){
   };
 }
 
-function preparePass(json){
+function preparePass(json,store){
   var template = createTemplate("coupon", {passTypeIdentifier:json.passTypeIdentifier, teamIdentifier:json.teamIdentifier});
 
   template.keys(KEYS_FOLDER, KEYS_PASSWORD);
@@ -96,9 +96,10 @@ function preparePass(json){
     logger.info('Pass with serial number '+json.serialNumber+' was created.');
   });
 
-  logger.info('Store pass to database.');
-  passes.save({pass:json});
-
+  if (store){
+    logger.info('Store pass to database.');
+    passes.save({pass:json});
+  }
   return pass;
 }
 
@@ -119,7 +120,7 @@ function initServer(server){
   }));
 
   server.get({path:'/passws/getSamplePass/:pass_name'},function (req, res, next){
-    var pass = preparePass(samplePassJSON());
+    var pass = preparePass(samplePassJSON(),true);
     logger.info('Render pass.');
     pass.render(res, function(error) {
       if (error){
@@ -248,7 +249,7 @@ function initServer(server){
     passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,p){
       if (p){
         p.pass.coupon.primaryFields[0].label=""+Math.floor(Math.random()*100);
-        var pass = preparePass(p.pass);
+        var pass = preparePass(p.pass,false);
         logger.info('Render pass.');
         pass.render(res, function(error) {
           if (error){
@@ -262,8 +263,6 @@ function initServer(server){
         res.send(401);
       }
     });
-
-    res.send(401);
   });
 
   server.post({path:'passws/v1/log'},function (req, res, next){
