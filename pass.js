@@ -18,7 +18,7 @@ var KEYS_PASSWORD = "123456";
 var IMAGE_FOLDER = "./images"
 
 var http_server = restify.createServer({
-  name:'http_restplatform'
+  name:'SmartPlaces RESP API'
 });
 
 initServer(http_server);
@@ -57,8 +57,8 @@ function samplePassJSON(){
       primaryFields : [
         {
           key : "offer",
-          label : "-50%",
-          value : "на американо"
+          label : "на американо",
+          value : "-50%"
         }
       ],
       secondaryFields : [
@@ -92,12 +92,8 @@ function preparePass(json,store){
     logger.error(error);
   });
 
-  pass.on('end',function(){
-    logger.info('Pass with serial number '+json.serialNumber+' was created.');
-  });
-
   if (store){
-    logger.info('Store pass to database.');
+    logger.info('Pass generation request: new pass with serial [%s] have been stored.',json.serialNumber);
     passes.save({pass:json});
   }
   return pass;
@@ -120,21 +116,20 @@ function initServer(server){
   }));
 
   server.get({path:'/passws/getSamplePass/:pass_name'},function (req, res, next){
-    var pass = preparePass(samplePassJSON(),true);
-    logger.info('Render pass.');
+    logger.info('Handling pass generation request.');
+    var json = samplePassJSON();
+    var pass = preparePass(json,true);
     pass.render(res, function(error) {
       if (error){
-        console.error(error);
+        logger.error(error);
         res.send(500);
       }
-      logger.info('Pass have been rendered!');
+      logger.info('Pass generation request: new pass with serial [%s] have been created.',json.serialNumber);
       res.send(200);
     });
   });
 
   server.post({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
-    logger.info('Handling registration request.');
-
     var authToken = req.header('Authorization');
     if (authToken) authToken = authToken.replace('ApplePass ','');
     var serialNumber = req.params.serial_number;
@@ -142,13 +137,12 @@ function initServer(server){
     var deviceId = req.params.device_id;
     var pushToken = req.params.pushToken;
 
-    logger.info(authToken+","+serialNumber+","+passType+","+deviceId+","+pushToken);
+    logger.info('Handling registration request: Auth: [%s], Serial: [%s], Type: [%s], Device: [%s], Push: [%s]',authToken, serialNumber, passType, deviceId, pushToken);
 
     passes.findOne({'pass.passTypeIdentifier':passType,'pass.serialNumber':serialNumber,'pass.authenticationToken':authToken}, function (err,pass){
       if (pass){
-        logger.info('Pass for device was found!');
         if (_.indexOf(pass.registrations,deviceId) > -1){
-          logger.info('Pass already was registered.');
+          logger.info('Registration request: pass [%s] already registered for device [%s].',serialNumber, deviceId);
           res.send(200);
         }else{
           passes.update({_id:pass._id},{$addToSet:{registrations:{deviceId:deviceId,pushToken:pushToken}}},{},function(err){
@@ -156,25 +150,24 @@ function initServer(server){
               logger.info(err);
               res.send(500);
             }else{
-              logger.info('Pass was registered successfuly!');
+              logger.info('Registration request: pass [%s] have been registered successfuly for device [%s]!', serialNumber, deviceId);
               res.send(201);
             }
           });
         }
       }else{
-        logger.info('Pass for device wasn\'t found!');
+        logger.info('Registration request: pass [%s] with type [s%] and auth [%s] wasn\'t found!', serialNumber, passType, authToken);
         res.send(401);
       }
     });
   });
 
   server.get({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id?'},function (req, res, next){
-    logger.info('Handling updates request.');
-
     var passType = req.params.pass_type_id;
     var deviceId = req.params.device_id;
     var passesUpdatedSince = req.params.passesUpdatedSince;
 
+    logger.info('Handling updates request: UpdatedSinc: [%s], Type: [%s], Device: [%s]', passesUpdatedSince, passType, deviceId);
 
     passes.find({'registrations.deviceId':deviceId},function(err,docs){
       if (docs.length>0){
@@ -195,72 +188,70 @@ function initServer(server){
         });
 
         if (result.serialNumbers.length > 0){
-          logger.info('Updates were found:');
-          logger.info(result);
+          logger.info('Updates request: updates for device [%s] were found: %j', deviceId, result);
           res.send(200,result);
         }else{
-          logger.info('Updates weren\'t found.');
+          logger.info('Updates request: updates for device [%s] weren\'t found.');
           res.send(204);
         }
       }else{
-        logger.info('Authentification was failed.');
+        logger.info('Updates request: device [%s] not found!',deviceId);
         res.send(404);
       }
     });
   });
 
   server.del({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
-    logger.info('Handling unregistration request.')
-
     var authToken = req.header('Authorization');
     if (authToken) authToken = authToken.replace('ApplePass ','');
     var serialNumber = req.params.serial_number;
     var passType = req.params.pass_type_id;
     var deviceId = req.params.device_id;
 
+    logger.info('Handling unregistration request: Auth: [%s], Serial: [%s], Type: [%s], Device: [%s]', authToken, serialNumber, passType, deviceId);
+
     passes.findOne({'pass.authenticationToken':authToken, 'pass.serialNumber':serialNumber, 'pass.passTypeIdentifier':passType, 'registrations.deviceId':deviceId},function(err,pass){
       if (pass){
-        logger.info('Pass was found.');
         passes.update({_id:pass._id},{$pull:{registrations: {deviceId:deviceId}}},function(err){
           if (err){
             logger.info(err);
             res.send(500);
           }else{
-            logger.info('Pass was unregistered successfuly.');
+            logger.info('Unregistration request: pass [%s] was successfuly unregistered for device [%s].',serialNumber,deviceId);
             res.send(200);
           }
         });
       }else{
-        logger.info('Pas wasn\'t found.');
+        logger.info('Unregistration request: pass [%s] for device [%s] wasn\'t found.',serialNumber,deviceId);
         res.send(401);
       }
     });
    });
 
   server.get({path:'/passws/v1/passes/:pass_type_id/:serial_number'},function (req, res, next){
-    logger.info('Handling pass delivery request.');
-
     var authToken = req.header('Authorization');
     if (authToken) authToken = authToken.replace('ApplePass ','');
     var serialNumber = req.params.serial_number;
     var passType = req.params.pass_type_id;
 
+    logger.info('Handling pass delivery request: Auth: [%s], Serial: [%s], Type: [%s]', authToken, serialNumber, passType);
 
     passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,p){
       if (p){
-        p.pass.coupon.primaryFields[0].label=""+Math.floor(Math.random()*100);
+        //Next line added only for test purpose
+        p.pass.coupon.primaryFields[0].value="-"+Math.floor(Math.random()*100)+"%";
         var pass = preparePass(p.pass,false);
-        logger.info('Render pass.');
         res.header('Last-Modified', new Date());
         pass.render(res, function(error) {
           if (error){
-            console.error(error);
+            logger.error(error);
             res.send(500);
           }
-          logger.info('Pass have been rendered!');
+          logger.info('Pass delivery request: updates for pass [%s] was rendered.',serialNumber);
           res.send(200);
         });
       }else{
+        logger.info('Pass delivery request: pass [%s] wasn\'t found.',serialNumber);
         res.send(401);
       }
     });
@@ -271,8 +262,8 @@ function initServer(server){
     var logs = req.params.logs;
     _.each(logs,function(log){
       db.collection('passbook_logs').insert({ts: new Date().getTime(),m:log});
+      logger.info('Log record added successuly: %s',log);
     });
-    logger.info('Log record added successuly.');
     res.send(200);
   });
 }
