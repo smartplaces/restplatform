@@ -167,7 +167,7 @@ function initServer(server){
     var deviceId = req.params.device_id;
     var passesUpdatedSince = req.params.passesUpdatedSince;
 
-    logger.info('Handling updates request: UpdatedSinc: [%s], Type: [%s], Device: [%s]', passesUpdatedSince, passType, deviceId);
+    logger.info('Handling updates request: UpdatedSince: [%s], Type: [%s], Device: [%s]', passesUpdatedSince, passType, deviceId);
 
     passes.find({'registrations.deviceId':deviceId},function(err,docs){
       if (docs.length>0){
@@ -188,7 +188,7 @@ function initServer(server){
         });
 
         if (result.serialNumbers.length > 0){
-          logger.info('Updates request: updates for device [%s] were found: %j', deviceId, result);
+          logger.info('Updates request: updates for device [%s] were found: ', deviceId, result);
           res.send(200,result);
         }else{
           logger.info('Updates request: updates for device [%s] weren\'t found.');
