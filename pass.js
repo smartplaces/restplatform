@@ -182,7 +182,6 @@ function initServer(server){
           serialNumbers: []
         }
         _.each(docs,function(d){
-          logger.info(d);
           if (d.pass.passTypeIdentifier === passType){
             if (passesUpdatedSince){
               if (!d.updatedAt || d.updatedAt > passesUpdatedSince){
@@ -192,8 +191,6 @@ function initServer(server){
               result.serialNumbers.push(d.pass.serialNumber);
             }
           }
-          logger.info('result-->');
-          logger.info(result);
         });
 
         if (result.serialNumbers.length > 0){
@@ -273,7 +270,7 @@ function initServer(server){
     logger.info('Handling log request.');
     var logs = req.params.logs;
     _.each(logs,function(log){
-      db.collection('passbook_logs').insert({m:log});
+      db.collection('passbook_logs').insert({ts: new Date().getTime(),m:log});
     });
     logger.info('Log record added successuly.');
     res.send(200);
