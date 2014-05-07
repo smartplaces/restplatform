@@ -96,7 +96,7 @@ function preparePass(json){
     logger.info('Pass with serial number '+json.serialNumber+' was created.');
   });
 
-  logger.info('Store pass to database...');
+  logger.info('Store pass to database.');
   passes.save({pass:json});
 
   return pass;
@@ -120,7 +120,7 @@ function initServer(server){
 
   server.get({path:'/passws/getSamplePass/:pass_name'},function (req, res, next){
     var pass = preparePass(samplePassJSON());
-    logger.info('Render pass...');
+    logger.info('Render pass.');
     pass.render(res, function(error) {
       if (error){
         console.error(error);
@@ -132,7 +132,7 @@ function initServer(server){
   });
 
   server.post({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
-    logger.info('Handling registration request...');
+    logger.info('Handling registration request.');
 
     var authToken = req.header('Authorization');
     if (authToken) authToken = authToken.replace('ApplePass ','');
@@ -168,7 +168,7 @@ function initServer(server){
   });
 
   server.get({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id?'},function (req, res, next){
-    logger.info('Handling updates request...');
+    logger.info('Handling updates request.');
 
     var passType = req.params.pass_type_id;
     var deviceId = req.params.device_id;
@@ -212,7 +212,7 @@ function initServer(server){
   });
 
   server.del({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
-    logger.info('Handling unregistration request...')
+    logger.info('Handling unregistration request.')
 
     var authToken = req.header('Authorization');
     if (authToken) authToken = authToken.replace('ApplePass ','');
@@ -250,8 +250,9 @@ function initServer(server){
 
     passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,p){
       if (p){
+        p.pass.coupon.primaryFields[0].label=""+Math.floor(Math.random()*100);
         var pass = preparePass(p.pass);
-        logger.info('Render pass...');
+        logger.info('Render pass.');
         pass.render(res, function(error) {
           if (error){
             console.error(error);
