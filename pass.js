@@ -1,3 +1,4 @@
+var logger = require('./log');
 var restify = require('restify');
 var _ = require('underscore');
 var fs = require('fs');
@@ -11,7 +12,6 @@ var db = mongojs(mongoConnection,['smartplaces']);
 var passes = db.collection('passes');
 
 var http_port = process.env.PORT || '8080';
-var https_port = '443';
 
 var KEYS_FOLDER = "./keys/";
 var KEYS_PASSWORD = "123456";
@@ -24,7 +24,7 @@ var http_server = restify.createServer({
 initServer(http_server);
 
 http_server.listen(http_port,function(){
-  console.log('%s listening at %s',http_server.name,http_server.url);
+  logger.info('%s listening at %s',http_server.name,http_server.url);
 });
 
 function samplePassJSON(){
@@ -89,14 +89,14 @@ function preparePass(json){
   pass.loadImagesFrom(IMAGE_FOLDER);
 
   pass.on("error", function(error) {
-    console.error(error);
+    logger.error(error);
   });
 
   pass.on('end',function(){
-    console.log('Pass with serial number '+json.serialNumber+' was created.');
+    logger.info('Pass with serial number '+json.serialNumber+' was created.');
   });
 
-  console.log('Store pass to database...');
+  logger.info('Store pass to database...');
   passes.save({pass:json});
 
   return pass;
@@ -120,19 +120,19 @@ function initServer(server){
 
   server.get({path:'/passws/getSamplePass/:pass_name'},function (req, res, next){
     var pass = preparePass(samplePassJSON());
-    console.log('Render pass...');
+    logger.info('Render pass...');
     pass.render(res, function(error) {
       if (error){
         console.error(error);
         res.send(500);
       }
-      console.log('Pass have been rendered!');
+      logger.info('Pass have been rendered!');
       res.send(200);
     });
   });
 
   server.post({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
-    console.log('Handling registration request...');
+    logger.info('Handling registration request...');
 
     var authToken = req.header('Authorization');
     if (authToken) authToken = authToken.replace('ApplePass ','');
@@ -141,34 +141,34 @@ function initServer(server){
     var deviceId = req.params.device_id;
     var pushToken = req.params.pushToken;
 
-    console.log(authToken+","+serialNumber+","+passType+","+deviceId+","+pushToken);
+    logger.info(authToken+","+serialNumber+","+passType+","+deviceId+","+pushToken);
 
     passes.findOne({'pass.passTypeIdentifier':passType,'pass.serialNumber':serialNumber,'pass.authenticationToken':authToken}, function (err,pass){
       if (pass){
-        console.log('Pass for device was found!');
+        logger.info('Pass for device was found!');
         if (_.indexOf(pass.registrations,deviceId) > -1){
-          console.log('Pass already was registered.');
+          logger.info('Pass already was registered.');
           res.send(200);
         }else{
           passes.update({_id:pass._id},{$addToSet:{registrations:{deviceId:deviceId,pushToken:pushToken}}},{},function(err){
             if (err){
-              console.log(err);
+              logger.info(err);
               res.send(500);
             }else{
-              console.log('Pass was registered successfuly!');
+              logger.info('Pass was registered successfuly!');
               res.send(201);
             }
           });
         }
       }else{
-        console.log('Pass for device wasn\'t found!');
+        logger.info('Pass for device wasn\'t found!');
         res.send(401);
       }
     });
   });
 
   server.get({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id?'},function (req, res, next){
-    console.log('Handling updates request...');
+    logger.info('Handling updates request...');
 
     var passType = req.params.pass_type_id;
     var deviceId = req.params.device_id;
@@ -182,8 +182,7 @@ function initServer(server){
           serialNumbers: []
         }
         _.each(docs,function(d){
-          try{
-          console.log(d);
+          logger.info(d);
           if (d.pass.passTypeIdentifier === passType){
             if (passesUpdatedSince){
               if (!d.updatedAt || d.updatedAt > passesUpdatedSince){
@@ -192,28 +191,27 @@ function initServer(server){
             }else{
               result.serialNumbers.push(d.pass.serialNumber);
             }
-          }}catch(ex){console.log(ex);}
-          console.log('result-->');
-          console.log(result);
+          logger.info('result-->');
+          logger.info(result);
         });
 
         if (result.serialNumbers.length > 0){
-          console.log('Updates were found:');
-          console.log(result);
+          logger.info('Updates were found:');
+          logger.info(result);
           res.send(200,result);
         }else{
-          console.log('Updates weren\'t found.');
+          logger.info('Updates weren\'t found.');
           res.send(204);
         }
       }else{
-        console.log('Authentification was failed.');
+        logger.info('Authentification was failed.');
         res.send(404);
       }
     });
   });
 
   server.del({path:'/passws/v1/devices/:device_id/registrations/:pass_type_id/:serial_number'},function (req, res, next){
-    console.log('Handling unregistration request...')
+    logger.info('Handling unregistration request...')
 
     var authToken = req.header('Authorization');
     if (authToken) authToken = authToken.replace('ApplePass ','');
@@ -223,25 +221,25 @@ function initServer(server){
 
     passes.findOne({'pass.authenticationToken':authToken, 'pass.serialNumber':serialNumber, 'pass.passTypeIdentifier':passType, 'registrations.deviceId':deviceId},function(err,pass){
       if (pass){
-        console.log('Pass was found.');
+        logger.info('Pass was found.');
         passes.update({_id:pass._id},{$pull:{registrations: {deviceId:deviceId}}},function(err){
           if (err){
-            console.log(err);
+            logger.info(err);
             res.send(500);
           }else{
-            console.log('Pass was unregistered successfuly.');
+            logger.info('Pass was unregistered successfuly.');
             res.send(200);
           }
         });
       }else{
-        console.log('Pas wasn\'t found.');
+        logger.info('Pas wasn\'t found.');
         res.send(401);
       }
     });
    });
 
   server.get({path:'/passws/v1/passes/:pass_type_id/:serial_number'},function (req, res, next){
-    console.log('Handling pass delivery request...');
+    logger.info('Handling pass delivery request.');
 
     var authToken = req.header('Authorization');
     if (authToken) authToken = authToken.replace('ApplePass ','');
@@ -252,13 +250,13 @@ function initServer(server){
     passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,p){
       if (p){
         var pass = preparePass(p.pass);
-        console.log('Render pass...');
+        logger.info('Render pass...');
         pass.render(res, function(error) {
           if (error){
             console.error(error);
             res.send(500);
           }
-          console.log('Pass have been rendered!');
+          logger.info('Pass have been rendered!');
           res.send(200);
         });
       }else{
@@ -270,12 +268,12 @@ function initServer(server){
   });
 
   server.post({path:'passws/v1/log'},function (req, res, next){
-    console.log('Handling log request...');
+    logger.info('Handling log request.');
     var logs = req.params.logs;
     _.each(logs,function(log){
       db.collection('passbook_logs').insert({m:log});
     });
-    console.log('Log record added successuly');
+    logger.info('Log record added successuly.');
     res.send(200);
   });
 }

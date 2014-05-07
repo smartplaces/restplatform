@@ -7,7 +7,8 @@
     "restify": "~2.6.3",
     "passbook": "~2.0.2",
     "mongojs": "~0.10.1",
-    "underscore": "~1.6.0"
+    "underscore": "~1.6.0",
+    "winston": "~0.7.3"
   },
   "devDependencies": {},
   "scripts": {
