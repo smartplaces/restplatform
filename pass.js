@@ -178,7 +178,7 @@ function initServer(server){
     passes.find({'registrations.deviceId':deviceId},function(err,docs){
       if (docs.length>0){
         var result = {
-          lastUpdated: new Date().getTime(),
+          lastUpdated: ""+new Date().getTime(),
           serialNumbers: []
         }
         _.each(docs,function(d){
