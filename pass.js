@@ -251,6 +251,7 @@ function initServer(server){
         p.pass.coupon.primaryFields[0].label=""+Math.floor(Math.random()*100);
         var pass = preparePass(p.pass,false);
         logger.info('Render pass.');
+        res.header('Last-Modified', new Date());
         pass.render(res, function(error) {
           if (error){
             console.error(error);
