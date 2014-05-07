@@ -191,6 +191,7 @@ function initServer(server){
             }else{
               result.serialNumbers.push(d.pass.serialNumber);
             }
+          }
           logger.info('result-->');
           logger.info(result);
         });
