@@ -53,6 +53,15 @@ function samplePassJSON(){
       messageEncoding : "utf-8"
     },
 
+    beacons:[
+      {
+        proximityUUID:"E2C56DB5-DFFB-48D2-B060-D0F5A71096E0",
+        major:1,
+        minor:1,
+        relevantText:"Hi, SmartPlace is near!"
+      }
+    ],
+
     coupon: {
       primaryFields : [
         {
@@ -126,6 +135,26 @@ function initServer(server){
       }
       logger.info('Pass generation request: new pass with serial [%s] have been created.',json.serialNumber);
       res.send(200);
+    });
+  });
+
+  server.get({path:'/passws/download/:id'},function (req, res, next){
+    var id = req.params.id;
+    logger.info('Handling pass generation request: Id: [%s]',id);
+    passes.findOne({_id:id}, function (err,p){
+      if (p){
+        var pass = preparePass(p.pass,false);
+        pass.render(res, function(error) {
+          if (error){
+            logger.error(error);
+            res.send(500);
+          }
+          logger.info('Pass generation request: pass [%s] was rendered.',id);
+          res.send(200);
+        });
+      }else{
+        res.send(404);
+      }
     });
   });
 
