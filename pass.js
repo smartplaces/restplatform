@@ -55,9 +55,7 @@ function samplePassJSON(){
 
     beacons:[
       {
-        proximityUUID:"E2C56DB5-DFFB-48D2-B060-D0F5A71096E0",
-        major:1,
-        minor:1,
+        proximityUUID:"E032FA6D-574C-B58A-9331-870092C92705",
         relevantText:"Hi, SmartPlace is near!"
       }
     ],
