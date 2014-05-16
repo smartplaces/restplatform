@@ -93,7 +93,8 @@ function initServer(server){
         if (p){
           shasum = crypto.createHash('sha1');
           shasum.update(p._id+"/"+p.userId);
-          if (hash && hash == shasum.digest('hex')){
+          // var controlHash = shasum.digest('hex'); should be used instead of userId
+          if (hash && hash == p.userId){
             pass.render(p.pass,res, function(error) {
               if (error){
                 logger.error(error);
