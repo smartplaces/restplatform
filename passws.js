@@ -42,7 +42,7 @@ function initServer(server){
   }));
 
 
-  server.get({path:'/passws/create/:pass_type_id/:serial_number?'},function(res,req,next){
+  server.get({path:'/passws/create/:pass_type_id/:serial_number?'},function(req,res,next){
     var passType = req.params.pass_type_id;
     var serialNumber = req.params.serial_number;
     var id = req.params.id;
@@ -50,7 +50,7 @@ function initServer(server){
     logger.info('Handling pass creation request: Id: [%s], Serial: [%s], Type: [%s]',id,serialNumber,passType);
     passes.findOne({_id:id},function(err,p){
       if (p){
-        shasum = crypto.createHash('sha1');
+        var shasum = crypto.createHash('sha1');
         shasum.update(p._id+"/"+p.userId);
         if (hash && hash == shasum.digest('hex')){
           var json = pass.defaultJSON(serialNumber,passType);
