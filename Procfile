@@ -1,1 +1,1 @@
-web: node pass.js
+web: node passws.js
