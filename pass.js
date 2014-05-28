@@ -99,6 +99,7 @@ var pass = {
           p.icon2x = image;
       });
       p.render(res, callback);
+    }
   }
 
 };
