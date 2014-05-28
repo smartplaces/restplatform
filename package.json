@@ -10,7 +10,6 @@
     "underscore": "~1.6.0",
     "winston": "~0.7.3",
     "mongodb": "~1.4.4",
-    "gridfs-stream": "~0.5.1",
     "fibers": "~1.0.1"
   },
   "devDependencies": {},

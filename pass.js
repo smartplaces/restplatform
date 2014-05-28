@@ -2,8 +2,9 @@ var createTemplate = require("passbook");
 var crypto = require('crypto');
 var _ = require('underscore');
 
-var mongo = require('mongodb');
-var Grid = require('gridfs-stream');
+var MongoClient = require('mongodb').MongoClient;
+var ObjectID = require('mongodb').ObjectID;
+var Grid = require('mongodb').Grid;
 
 var Future = require('fibers/future');
 
@@ -75,33 +76,76 @@ var pass = {
     var template = createTemplate("coupon", {passTypeIdentifier:json.passTypeIdentifier, teamIdentifier:json.teamIdentifier});
     template.keys(KEYS_FOLDER, KEYS_PASSWORD);
     var p = template.createPass(_.omit(json,'passTypeIdentifier','teamIdentifier'));
-    if (!images || !images.icon || !images.logo){
-      p.loadImagesFrom(IMAGE_FOLDER);
-    }else{
-      var future = new Future;
-      var onComplete = future.resolver();
-      var mongoDb;
+    p.loadImagesFrom(IMAGE_FOLDER);
+    if (images && (images.icon || images.logo || images.strip)){
       MongoClient.connect('mongodb://smartplaces:EvystVtcnf@oceanic.mongohq.com:10091/smartplaces', function(err, db) {
-        mongoDb=db;
-        onComplete(err,db);
-      });
-      future.wait();
+        if(err) {
+          res.send(500);
+          return console.dir(err);
+        }
+        var gLogos = new Grid(db, 'cfs_gridfs.logos');
+        var gIcons = new Grid(db, 'cfs_gridfs.icons');
+        var gStrips = new Grid(db, 'cfs_gridfs.strips');
 
-      var gfs = Grid(db, mongo);
-      var bufs = [];
-      var logoStream = gfs.createReadStream({_id: new mongo.ObjectId(images.logo.key)});
-      logoStream.on('data', function(d){ bufs.push(d); });
-      logoStream.on('end', function(){
-          var image = Buffer.concat(bufs);
-          p.images.logo = image
-          p.images.logo2x = image
-          p.icon = image;
-          p.icon2x = image;
+        if (images.logo && images.icon){
+          gLogos.get(new ObjectID(images.logo.key), function(err, data) {
+            if(err) {
+              res.send(500);
+              console.log('Logo extraction error');
+              return console.dir(err);
+            }
+            p.images.logo = data;
+            p.images.logo2x = data;
+
+            gIcons.get(new ObjectID(images.icon.key), function(err, data) {
+              if(err) {
+                res.send(500);
+                console.log('Icon extraction error');
+                return console.dir(err);
+              }
+              p.images.icon = data;
+              p.images.icon2x = data;
+
+              if (images.strip){
+                gStrips.get(new ObjectID(images.strip.key),function(err,data){
+                  if(err) {
+                    res.send(500);
+                    console.log('Strip extraction error');
+                    return console.dir(err);
+                  }
+                  p.images.strip = data;
+                  p.images.strip2x = data;
+
+                  p.render(res,callback);
+                });
+              }else{
+                p.render(res,callback);
+              }
+
+            });
+          });
+        }else{
+          if (images.strip){
+            gStrips.get(new ObjectID(images.strip.key),function(err,data){
+              if(err) {
+                res.send(500);
+                console.log('Strip extraction error');
+                return console.dir(err);
+              }
+              p.images.strip = data;
+              p.images.strip2x = data;
+
+              p.render(res,callback);
+            });
+          }else{
+            p.render(res,callback);
+          }
+        }
+
       });
-      p.render(res, callback);
     }
   }
-
 };
+
 
 module.exports = pass;
