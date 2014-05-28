@@ -89,7 +89,7 @@ function initServer(server){
       });
     }else{
       logger.info('Handling pass generation request: Serial: [%s], Type: [%s], Hash: [%s]',serialNumber,passType,hash);
-      passes.findOne({'pass.passType':passType,'pass.serialNumber':serialNumber}, function (err,p){
+      passes.findOne({'pass.passTypeIdentifier':passType,'pass.serialNumber':serialNumber}, function (err,p){
         if (p){
           pass.render(p.pass, p.images, res, function(error) {
             if (error){
