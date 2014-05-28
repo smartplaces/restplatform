@@ -2,6 +2,11 @@ var createTemplate = require("passbook");
 var crypto = require('crypto');
 var _ = require('underscore');
 
+var mongo = require('mongodb');
+var Grid = require('gridfs-stream');
+
+var Future = require('fibers/future');
+
 var KEYS_FOLDER = "./keys/";
 var KEYS_PASSWORD = "123456";
 var IMAGE_FOLDER = "./images"
@@ -66,12 +71,34 @@ var pass = {
     };
   },
 
-  render: function(json, res, callback){
+  render: function(json, images, res, callback){
     var template = createTemplate("coupon", {passTypeIdentifier:json.passTypeIdentifier, teamIdentifier:json.teamIdentifier});
     template.keys(KEYS_FOLDER, KEYS_PASSWORD);
     var p = template.createPass(_.omit(json,'passTypeIdentifier','teamIdentifier'));
-    p.loadImagesFrom(IMAGE_FOLDER);
-    p.render(res, callback);
+    if (!images || !images.icon || !images.logo){
+      p.loadImagesFrom(IMAGE_FOLDER);
+    }else{
+      var future = new Future;
+      var onComplete = future.resolver();
+      var mongoDb;
+      MongoClient.connect('mongodb://smartplaces:EvystVtcnf@oceanic.mongohq.com:10091/smartplaces', function(err, db) {
+        mongoDb=db;
+        onComplete(err,db);
+      });
+      future.wait();
+
+      var gfs = Grid(db, mongo);
+      var bufs = [];
+      var logoStream = gfs.createReadStream({_id: new mongo.ObjectId(images.logo.key)});
+      logoStream.on('data', function(d){ bufs.push(d); });
+      logoStream.on('end', function(){
+          var image = Buffer.concat(bufs);
+          p.images.logo = image
+          p.images.logo2x = image
+          p.icon = image;
+          p.icon2x = image;
+      });
+      p.render(res, callback);
   }
 
 };

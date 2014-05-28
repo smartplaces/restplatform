@@ -79,7 +79,7 @@ function initServer(server){
 
     if (sample){
       logger.info('Handling pass generation request: Sample, Serial: [%s], Type: [%s]',serialNumber,passType);
-      pass.render(pass.defaultJSON(),res,function(error){
+      pass.render(pass.defaultJSON(),null,res,function(error){
         if (error){
           logger.error(error);
           res.send(500);
@@ -91,21 +91,14 @@ function initServer(server){
       logger.info('Handling pass generation request: Serial: [%s], Type: [%s], Hash: [%s]',serialNumber,passType,hash);
       passes.findOne({'pass.passType':passType,'pass.serialNumber':serialNumber}, function (err,p){
         if (p){
-          shasum = crypto.createHash('sha1');
-          shasum.update(p._id+"/"+p.userId);
-          // var controlHash = shasum.digest('hex'); should be used instead of userId
-          if (hash && hash == p.userId){
-            pass.render(p.pass,res, function(error) {
-              if (error){
-                logger.error(error);
-                res.send(500);
-              }
-              logger.info('Pass generation request: pass with serial [%s] and type [%s] was rendered.',serialNumber,passType);
-              res.send(200);
-            });
-          }else{
-            res.send(401);
-          }
+          pass.render(p.pass, p.images, res, function(error) {
+            if (error){
+              logger.error(error);
+              res.send(500);
+            }
+            logger.info('Pass generation request: pass with serial [%s] and type [%s] was rendered.',serialNumber,passType);
+            res.send(200);
+          });
         }else{
           res.send(404);
         }
@@ -225,7 +218,7 @@ function initServer(server){
         //Next line added only for test purpose
         p.pass.coupon.primaryFields[0].value="-"+Math.floor(Math.random()*100)+"%";
         res.header('Last-Modified', new Date());
-        pass.render(p.pass, res, function(error) {
+        pass.render(p.pass, p.images, res, function(error) {
           if (error){
             logger.error(error);
             res.send(500);
