@@ -51,14 +51,16 @@ var pass = {
           {
             key : "offer",
             label : "на американо",
-            value : "-50%"
+            value : "-50%",
+            changeMessage : "Ваша новая скидка: %@"
           }
         ],
         secondaryFields : [
           {
             key : "addInfo",
             label : "Предложение для",
-            value : "Всех посетителей"
+            value : "Всех посетителей",
+            changeMessage : "Теперь предложение для: %@"
           }
         ],
         backFields : [

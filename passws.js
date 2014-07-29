@@ -83,8 +83,8 @@ function initServer(server){
     passes.findOne({_id:id},function(err,p){
       if (p && p.registrations){
         var options = {
-          cert: '',
-          key: '',
+          cert: './keys/pass.ru.smartplaces.coupon.cert.pem',
+          key: './keys/pass.ru.smartplaces.coupon.pkey.pem',
           production: true
         };
         var apnConnection = new apn.Connection(options);
