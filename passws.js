@@ -6,7 +6,14 @@ var mongojs = require('mongojs');
 var crypto = require('crypto');
 var apn = require('apn');
 
-
+var apnOptions = {
+  cert: './keys/pass.ru.smartplaces.coupon.cert.pem',
+  key: './keys/pass.ru.smartplaces.coupon.pkey.pem',
+  production: true
+};
+var feedback = new apn.feedback(apnOptions);
+feedback.on('feedback', console.log);
+feedback.on('feedbackError', console.error);
 
 var mongoConnection = 'mongodb://smartplaces:EvystVtcnf@oceanic.mongohq.com:10091/smartplaces'; // || process.env.MONGOHQ_URL || 'localhost:3001/smartplaces';
 var db = mongojs(mongoConnection,['smartplaces']);
@@ -82,12 +89,8 @@ function initServer(server){
     logger.info('Handling pass notification request: Id: [%s], Serial: [%s], Type: [%s]',id,serialNumber,passType);
     passes.findOne({_id:id},function(err,p){
       if (p && p.registrations){
-        var options = {
-          cert: './keys/pass.ru.smartplaces.coupon.cert.pem',
-          key: './keys/pass.ru.smartplaces.coupon.pkey.pem',
-          production: true
-        };
-        var apnConnection = new apn.Connection(options);
+
+        var apnConnection = new apn.Connection(apnOptions);
         _.each(p.registrations,function (r){
           logger.info('Pass notification request: send notification to device [%s]', r.deviceId);
           var device = new apn.Device(r.deviceId);
