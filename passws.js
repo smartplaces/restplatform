@@ -289,8 +289,8 @@ function initServer(server){
               res.send(304);
             }
           }catch(ex){
-              console.error(ex);
-            }
+              logger.error(ex);
+          }
         }
         res.header('Last-Modified', new Date());
         pass.render(p.pass, p.images, res, function(error) {
