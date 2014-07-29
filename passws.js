@@ -278,13 +278,18 @@ function initServer(server){
     var serialNumber = req.params.serial_number;
     var passType = req.params.pass_type_id;
 
-    logger.info('Handling pass delivery request: Auth: [%s], Serial: [%s], Type: [%s]', authToken, serialNumber, passType);
+    logger.info('Handling pass delivery request: Auth: [%s], Serial: [%s], Type: [%s], If-Modified-Since: [%s]', authToken, serialNumber, passType, modifiedSince);
 
     passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,p){
       if (p){
-        if (modifiedSince && modifiedSince.getTime() > p.updatedAt){
-          logger.info('Pass delivery request: pass does not modified since ',modifiedSince);
-          res.send(304);
+        if (modifiedSince && p.updatedAt){
+          try{
+            if (p.updatedAt > new Date(modifiedSince).getTime()){
+              logger.info('Pass delivery request: pass does not modified since ',modifiedSince);
+              res.send(304);
+            }catch(ex){
+              console.error(ex);
+            }
         }
         res.header('Last-Modified', new Date());
         pass.render(p.pass, p.images, res, function(error) {
