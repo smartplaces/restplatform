@@ -4,12 +4,14 @@ var restify = require('restify');
 var _ = require('underscore');
 var mongojs = require('mongojs');
 var crypto = require('crypto');
+var apn = require('apn');
 
 
 
 var mongoConnection = 'mongodb://smartplaces:EvystVtcnf@oceanic.mongohq.com:10091/smartplaces'; // || process.env.MONGOHQ_URL || 'localhost:3001/smartplaces';
 var db = mongojs(mongoConnection,['smartplaces']);
 var passes = db.collection('passes');
+var locations = db.collection('locations');
 
 var http_port = process.env.PORT || '8080';
 
@@ -41,6 +43,62 @@ function initServer(server){
 	  'default': 'index.html'
   }));
 
+
+  server.get({path:'/mobile/locations/:user_id?'},function (req,res,next){
+    var userId = req.params.user_id;
+    logger.info('Handling get locations for mobile app request: userId: [%s]',userId);
+
+    var q = {userId : userId};
+    if (userId == 'all'){
+      q = {};
+    }
+
+    locations.find(q, function(err, docs){
+      if (docs.length > 0){
+        var result = [];
+        _.each(docs,function(d){
+          result.push(d);
+        });
+
+        if (result.length > 0){
+          logger.info('Locations for mobile app were found: ',result);
+          res.send(200,result);
+        }else{
+          logger.info('Locations for mobile app weren\'t found - 204.');
+          res.send(204);
+        }
+      }else{
+        logger.info('Locations for mobile app not found - 404!');
+        res.send(404);
+      }
+    });
+
+  });
+
+  server.get({path:'/passws/notify/:pass_type_id/:serial_number?'},function (req,res,next){
+    var passType = req.params.pass_type_id;
+    var serialNumber = req.params.serial_number;
+    var id = req.params.id;
+    logger.info('Handling pass notification request: Id: [%s], Serial: [%s], Type: [%s]',id,serialNumber,passType);
+    passes.findOne({_id:id},function(err,p){
+      if (p && p.registrations){
+        var options = {
+          cert: '',
+          key: '',
+          production: true
+        };
+        var apnConnection = new apn.Connection(options);
+        _.each(p.registrations,function (r){
+          var device = new apn.Device(r.deviceId);
+          var n = new apn.Notification();
+          n.payload = {};
+          apnConnection.pushNotification(n,device);
+        });
+
+
+      }
+    });
+  });
 
   server.get({path:'/passws/create/:pass_type_id/:serial_number?'},function(req,res,next){
     var passType = req.params.pass_type_id;

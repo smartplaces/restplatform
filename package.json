@@ -10,7 +10,8 @@
     "underscore": "~1.6.0",
     "winston": "~0.7.3",
     "mongodb": "~1.4.4",
-    "fibers": "~1.0.1"
+    "fibers": "~1.0.1",
+    "apn": "~1.5.2"
   },
   "devDependencies": {},
   "scripts": {
