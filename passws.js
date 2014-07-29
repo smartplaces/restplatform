@@ -279,7 +279,7 @@ function initServer(server){
     passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,p){
       if (p){
         //Next line added only for test purpose
-        p.pass.coupon.primaryFields[0].value="-"+Math.floor(Math.random()*100)+"%";
+        //p.pass.coupon.primaryFields[0].value="-"+Math.floor(Math.random()*100)+"%";
         res.header('Last-Modified', new Date());
         pass.render(p.pass, p.images, res, function(error) {
           if (error){
