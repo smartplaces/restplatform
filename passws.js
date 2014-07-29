@@ -287,7 +287,8 @@ function initServer(server){
             if (p.updatedAt > new Date(modifiedSince).getTime()){
               logger.info('Pass delivery request: pass does not modified since ',modifiedSince);
               res.send(304);
-            }catch(ex){
+            }
+          }catch(ex){
               console.error(ex);
             }
         }
