@@ -89,13 +89,18 @@ function initServer(server){
         };
         var apnConnection = new apn.Connection(options);
         _.each(p.registrations,function (r){
+          logger.info('Pass notification request: send notification to device [%s]', r.deviceId);
           var device = new apn.Device(r.deviceId);
           var n = new apn.Notification();
           n.payload = {};
           apnConnection.pushNotification(n,device);
         });
 
-
+        logger.info('Pass notification request: [%s] devices were notified.', p.registrations.length);
+        res.send(200);
+      }else{
+        logger.info('Pass notification request: pass with id [%s] not found!', id);
+        res.send(404);
       }
     });
   });
