@@ -273,6 +273,7 @@ function initServer(server){
 
   server.get({path:'/passws/v1/passes/:pass_type_id/:serial_number'},function (req, res, next){
     var authToken = req.header('Authorization');
+    var modifiedSince = req.header('If-Modified-Since');
     if (authToken) authToken = authToken.replace('ApplePass ','');
     var serialNumber = req.params.serial_number;
     var passType = req.params.pass_type_id;
@@ -281,8 +282,10 @@ function initServer(server){
 
     passes.findOne({'pass.authenticationToken':authToken,'pass.serialNumber':serialNumber,'pass.passTypeIdentifier':passType},function(err,p){
       if (p){
-        //Next line added only for test purpose
-        //p.pass.coupon.primaryFields[0].value="-"+Math.floor(Math.random()*100)+"%";
+        if (modifiedSince && modifiedSince.getTime() > p.updatedAt){
+          logger.info('Pass delivery request: pass does not modified since ',modifiedSince);
+          res.send(304);
+        }
         res.header('Last-Modified', new Date());
         pass.render(p.pass, p.images, res, function(error) {
           if (error){
