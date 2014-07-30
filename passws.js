@@ -92,8 +92,8 @@ function initServer(server){
 
         var apnConnection = new apn.Connection(_.extend(apnOptions,{address:'gateway.push.apple.com'}));
         _.each(p.registrations,function (r){
-          logger.info('Pass notification request: send notification to device [%s]', r.deviceId);
-          var device = new apn.Device(r.deviceId);
+          logger.info('Pass notification request: send notification to device [%s]', r.pushToken);
+          var device = new apn.Device(r.pushToken);
           var n = new apn.Notification();
           n.payload = {};
           apnConnection.pushNotification(n,device);
