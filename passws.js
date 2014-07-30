@@ -11,7 +11,7 @@ var apnOptions = {
   key: './keys/pass.ru.smartplaces.coupon.pkey.pem',
   production: true
 };
-var feedback = new apn.feedback(apnOptions);
+var feedback = new apn.feedback(_.extend(apnOptions,{address:'feedback.push.apple.com'}));
 feedback.on('feedback', console.log);
 feedback.on('feedbackError', console.error);
 
@@ -90,7 +90,7 @@ function initServer(server){
     passes.findOne({_id:id},function(err,p){
       if (p && p.registrations){
 
-        var apnConnection = new apn.Connection(apnOptions);
+        var apnConnection = new apn.Connection(_.extend(apnOptions,{address:'gateway.push.apple.com'}));
         _.each(p.registrations,function (r){
           logger.info('Pass notification request: send notification to device [%s]', r.deviceId);
           var device = new apn.Device(r.deviceId);
