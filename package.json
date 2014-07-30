@@ -11,7 +11,8 @@
     "winston": "~0.7.3",
     "mongodb": "~1.4.4",
     "fibers": "~1.0.1",
-    "apn": "~1.5.2"
+    "apn": "~1.5.2",
+    "debug": "~1.0.4"
   },
   "devDependencies": {},
   "scripts": {
