@@ -117,11 +117,14 @@ function initServer(server){
           case "FAR": proximities.push("NEAR") ; proximities.push("FAR"); break;
           default: break;
         }
-        //TODO: Add filter for start-end fields
         var qs = {
-            active: true,
-            beacons: {$in: tags},
-            proximity: {$in: proximities}
+          active: true,
+          beacons: {$in: tags},
+          proximity: {$in: proximities},
+          $and : [
+            {$or: [{start: null},{start: {$exists:false}},{start:{$gte: new Date()}}]},
+            {$or: [{end: null},{end: {$exists:false}},{end:{$gte: new Date()}}]}
+          ]
         }
 
         scenarios.findOne(qs, function(err, scenario){
@@ -137,8 +140,33 @@ function initServer(server){
                 res.send(500);
               }
               if (message){
-                logger.info('Message for mobile app request was found: ',message);
-                res.send(200,message);
+                message.location = location;
+                message.frequency = scenario.frequency;
+
+                if (message.image && message.image.url){
+                  message.image.url = "https://secure-bastion-8859.herokuapp.com"+message.image.url;
+                }
+
+                if (scenario.coupon){
+                  passes.findOne({_id:scenario.coupon},function(err,p){
+                    if (err){
+                      logger.error(err);
+                      res.send(500);
+                    }
+                    if (p){
+                      message.coupon='http://sleepy-scrubland-4869.herokuapp.com/passws/download/'+p.pass.passTypeIdentifier+'/'+p.pass.serialNumber+'/smartplaces.pkpass?hash=NONE';
+                      logger.info('Message with coupon for mobile app request was found: ',message);
+                      res.send(200,message);
+                    }else{
+                      logger.info('Coupon for message for mobile app request not found - 404!');
+                      res.send(404);
+                    }
+                  });
+                }else{
+                  logger.info('Message for mobile app request was found: ',message);
+                  res.send(200,message);
+                }
+
               }else{
                 logger.info('Message for mobile app request not found - 404!');
                 res.send(404);
