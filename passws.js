@@ -63,6 +63,10 @@ function initServer(server){
     }
 
     locations.find(q, function(err, docs){
+      if (err){
+        logger.error(err);
+        res.send(500);
+      }
       if (docs.length > 0){
         var result = [];
         _.each(docs,function(d){
@@ -100,7 +104,12 @@ function initServer(server){
     }
 
     locations.findOne(q, p, function(err, location){
+      if (err){
+        logger.error(err);
+        res.send(500);
+      }
       if (location.beacons.length == 1){
+        logger.info('Beacon for mobile app request was found: ',location);
         var tags = location.beacons[0].tags
         var proximities = ["IMMEDIATE"]
         switch (proximity){
@@ -116,16 +125,25 @@ function initServer(server){
         }
 
         scenarios.findOne(qs, function(err, scenario){
+          if (err){
+            logger.error(err);
+            res.send(500);
+          }
           if (scenario){
-              messages.findOne({_id:scenario.message},function(err,message){
-                if (message){
-                  logger.info('Message for mobile app request were found: ',message);
-                  res.send(200,message);
-                }else{
-                  logger.info('Message for mobile app request not found - 404!');
-                  res.send(404);
-                }
-              });
+            logger.info('Scenario for mobile app request was found: ',scenario);
+            messages.findOne({_id:scenario.message},function(err,message){
+              if (err){
+                logger.error(err);
+                res.send(500);
+              }
+              if (message){
+                logger.info('Message for mobile app request was found: ',message);
+                res.send(200,message);
+              }else{
+                logger.info('Message for mobile app request not found - 404!');
+                res.send(404);
+              }
+            });
           }else{
             logger.info('Scenario for mobile app request not found - 404!');
             res.send(404);
