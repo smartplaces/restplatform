@@ -19,6 +19,8 @@ var mongoConnection = 'mongodb://smartplaces:EvystVtcnf@oceanic.mongohq.com:1009
 var db = mongojs(mongoConnection,['smartplaces']);
 var passes = db.collection('passes');
 var locations = db.collection('locations');
+var scenarios = db.collection('scenarios');
+var messages = db.collection('messages');
 
 var http_port = process.env.PORT || '8080';
 
@@ -68,14 +70,69 @@ function initServer(server){
         });
 
         if (result.length > 0){
-          logger.info('Locations for mobile app were found: ',result);
+          logger.info('Locations for mobile app request were found: ',result);
           res.send(200,result);
         }else{
-          logger.info('Locations for mobile app weren\'t found - 204.');
+          logger.info('Locations for mobile app request weren\'t found - 204.');
           res.send(204);
         }
       }else{
-        logger.info('Locations for mobile app not found - 404!');
+        logger.info('Locations for mobile app request not found - 404!');
+        res.send(404);
+      }
+    });
+
+  });
+
+  server.get({path:'/mobile/message/:uuid/:major/:minor/:proximity'},function (req,res,next){
+    var uuid = req.params.uuid;
+    var major = req.params.major;
+    var minor = req.params.minor;
+    var proximity = req.params.proximity;
+    logger.info('Handling get message for mobile app request: [%s]:[%s]:[%s] [%s], ',uuid, major, minor, proximity);
+
+    var q = {
+      beacons: {$elemMatch: {uuid: uuid, major: parseInt(major), minor: parseInt(minor)}}
+    }
+
+    var p = {
+      "beacons.$":1
+    }
+
+    locations.findOne(q, p, function(err, location){
+      if (location.beacons.length == 1){
+        var tags = location.beacons[0].tags
+        var proximities = ["IMMEDIATE"]
+        switch (proximity){
+          case "NEAR": proximities.push("NEAR"); break;
+          case "FAR": proximities.push("NEAR") ; proximities.push("FAR"); break;
+          default: break;
+        }
+        //TODO: Add filter for start-end fields
+        var qs = {
+            active: true,
+            beacons: {$in: tags},
+            proximity: {$in: proximities}
+        }
+
+        scenarios.findOne(qs, function(err, scenario){
+          if (scenario){
+              messages.findOne({_id:scenario.message},function(err,message){
+                if (message){
+                  logger.info('Message for mobile app request were found: ',message);
+                  res.send(200,message);
+                }else{
+                  logger.info('Message for mobile app request not found - 404!');
+                  res.send(404);
+                }
+              });
+          }else{
+            logger.info('Scenario for mobile app request not found - 404!');
+            res.send(404);
+          }
+        });
+      }else{
+        logger.info('Beacon for mobile app request not found - 404!');
         res.send(404);
       }
     });
