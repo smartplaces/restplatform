@@ -100,6 +100,11 @@ function initServer(server){
     }
 
     var p = {
+      title:1,
+      address:1,
+      contacts:1,
+      lat:1,
+      lng:1,
       "beacons.$":1
     }
 
